@@ -8,16 +8,20 @@ checagens automáticas:
   (price, final_price ou pix_price);
 - busca: quando o caso define produtos esperados, eles precisam aparecer no retorno.
 
+Os resultados ficam em evals/search_results.json. Uma nova execução só roda os casos que
+ainda não têm resultado; use --only para escolher casos e refazê-los.
+
 Uso (a partir da raiz do projeto):
-    .venv\\Scripts\\python evals\\run_search_eval.py            # todos os casos
-    .venv\\Scripts\\python evals\\run_search_eval.py --only 6 7  # só alguns casos
-    .venv\\Scripts\\python evals\\run_search_eval.py --delay 10  # pausa entre casos (s)
+    .venv\\Scripts\\python -u evals\\run_search_eval.py            # casos pendentes
+    .venv\\Scripts\\python -u evals\\run_search_eval.py --only 6 7  # refaz só esses casos
+    .venv\\Scripts\\python -u evals\\run_search_eval.py --delay 10  # pausa entre casos (s)
 """
 
 import argparse
 import json
 import re
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -30,7 +34,9 @@ sys.stdout.reconfigure(encoding="utf-8")
 from src.assistant import create_assistant  # noqa: E402
 
 REPORT_PATH = ROOT / "evals" / "report_search.md"
+STATE_PATH = ROOT / "evals" / "search_results.json"  # resultados já obtidos (permite retomar)
 MAX_RETRIES = 5
+CALL_TIMEOUT = 90.0  # segundos; chamada que não volta nesse prazo é tratada como erro retentável
 DEFAULT_DELAY = 6.0  # segundos entre casos, para respeitar o limite por minuto do free tier
 
 
@@ -66,8 +72,7 @@ CASES = [
 
 
 def message_text(message) -> str:
-    text = getattr(message, "text", "")
-    return text() if callable(text) else text
+    return message.text  # propriedade (o uso como método está obsoleto no LangChain 1.x)
 
 
 def parse_brl(value: str) -> float:
@@ -77,6 +82,11 @@ def parse_brl(value: str) -> float:
 
 def cited_prices(answer: str) -> list[float]:
     return [parse_brl(m) for m in re.findall(r"R\$\s*([\d.]*\d(?:,\d{1,2})?)", answer)]
+
+
+def numbers_in(text: str) -> set[float]:
+    """Números escritos pelo cliente (ex.: '1500' em 'até 1500'), que o agente pode repetir sem inventar."""
+    return {parse_brl(m) for m in re.findall(r"\d[\d.]*(?:,\d+)?", text)}
 
 
 def collect_tool_data(messages: list) -> tuple[list[dict], set[int], set[float]]:
@@ -98,8 +108,30 @@ def collect_tool_data(messages: list) -> tuple[list[dict], set[int], set[float]]
     return calls, product_ids, allowed
 
 
+def invoke_with_timeout(agent, payload: dict, config: dict):
+    """agent.invoke com prazo. Se a chamada não voltar, levanta TimeoutError e abandona a thread."""
+    box: dict = {}
+
+    def target() -> None:
+        try:
+            box["result"] = agent.invoke(payload, config)
+        except BaseException as error:  # noqa: BLE001
+            box["error"] = error
+
+    worker = threading.Thread(target=target, daemon=True)
+    worker.start()
+    worker.join(CALL_TIMEOUT)
+    if worker.is_alive():
+        raise TimeoutError(f"TIMEOUT: sem resposta do modelo em {CALL_TIMEOUT:.0f}s")
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
+
+
 def retry_delay(error: Exception, attempt: int) -> float | None:
-    """Segundos para esperar se o erro for de cota (429) ou sobrecarga (503); None caso contrário."""
+    """Segundos para esperar se o erro for retentável (429, 503 ou timeout); None caso contrário."""
+    if isinstance(error, TimeoutError):
+        return 5.0
     text = str(error)
     if not any(token in text for token in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE")):
         return None
@@ -113,16 +145,16 @@ def run_case(agent, case: Case) -> dict:
     last_error = ""
     for attempt in range(MAX_RETRIES + 1):
         # Thread nova a cada tentativa, para não herdar estado de uma execução interrompida.
-        thread_id = f"search-eval-{case.number}-{attempt}"
-        config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 12}
+        config = {"configurable": {"thread_id": f"search-eval-{case.number}-{attempt}"}, "recursion_limit": 12}
+        payload = {"messages": [{"role": "user", "content": case.message}]}
         try:
-            result = agent.invoke({"messages": [{"role": "user", "content": case.message}]}, config)
+            result = invoke_with_timeout(agent, payload, config)
         except Exception as error:  # noqa: BLE001
             last_error = str(error)
             delay = retry_delay(error, attempt)
             if delay is None or attempt == MAX_RETRIES:
                 break
-            print(f"   erro de cota/sobrecarga; aguardando {delay:.0f}s (tentativa {attempt + 1})", flush=True)
+            print(f"   {last_error[:80]}... aguardando {delay:.0f}s (tentativa {attempt + 1})", flush=True)
             time.sleep(delay)
             continue
 
@@ -130,11 +162,11 @@ def run_case(agent, case: Case) -> dict:
         calls, product_ids, allowed = collect_tool_data(messages)
         answer = message_text(messages[-1])
         prices = cited_prices(answer)
+        allowed |= numbers_in(case.message)  # valores que o próprio cliente citou não contam como invenção
         invalid = [p for p in prices if not any(abs(p - a) < 0.01 for a in allowed)]
         missing = sorted(case.expect_ids - product_ids)
         any_ok = not case.expect_any_ids or bool(case.expect_any_ids & product_ids)
         return {
-            "case": case,
             "error": None,
             "model_calls": sum(1 for m in messages if m.type == "ai"),
             "tool_args": [c["args"] for c in calls if c["name"] == "search_products"],
@@ -146,7 +178,7 @@ def run_case(agent, case: Case) -> dict:
             "search_ok": not missing and any_ok,
             "missing_ids": missing if missing else (sorted(case.expect_any_ids) if not any_ok else []),
         }
-    return {"case": case, "error": last_error, "model_calls": 0}
+    return {"error": last_error, "model_calls": 0}
 
 
 def cell(text: str, limit: int = 120) -> str:
@@ -154,7 +186,8 @@ def cell(text: str, limit: int = 120) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def write_report(results: list[dict]) -> None:
+def write_report(saved: dict[int, dict]) -> None:
+    results = [{"case": c, **saved[c.number]} for c in CASES if c.number in saved]
     done = [r for r in results if not r["error"]]
     price_ok = sum(r["price_ok"] for r in done)
     search_ok = sum(r["search_ok"] for r in done)
@@ -169,7 +202,7 @@ def write_report(results: list[dict]) -> None:
         "",
         "## Resumo",
         "",
-        f"- Casos executados: {len(done)}/{len(results)}" + (f" ({len(errors)} com erro)" if errors else ""),
+        f"- Casos com resultado: {len(done)}/{len(CASES)}" + (f" ({len(errors)} com erro)" if errors else ""),
         f"- Checagem de preço (todo R$ citado existe no retorno da tool): {price_ok}/{len(done)}",
         f"- Checagem de busca (produtos esperados retornados): {search_ok}/{len(done)}",
         f"- Passaram nas duas checagens: {all_ok}/{len(done)}",
@@ -224,17 +257,25 @@ def write_report(results: list[dict]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--only", type=int, nargs="+", help="números dos casos a executar")
+    parser.add_argument("--only", type=int, nargs="+", help="números dos casos a (re)executar")
     parser.add_argument("--delay", type=float, default=DEFAULT_DELAY, help="pausa entre casos, em segundos")
     args = parser.parse_args()
 
-    cases = [c for c in CASES if not args.only or c.number in args.only]
+    saved: dict[int, dict] = {}
+    if STATE_PATH.exists():
+        saved = {int(k): v for k, v in json.loads(STATE_PATH.read_text(encoding="utf-8")).items()}
+
+    pending = lambda c: c.number not in saved or saved[c.number]["error"]  # noqa: E731
+    cases = [c for c in CASES if (c.number in args.only if args.only else pending(c))]
+    if not cases:
+        print("Nada a executar: todos os casos já têm resultado (use --only para refazer).")
+        return
+
     agent = create_assistant()
-    results = []
     for index, case in enumerate(cases):
         print(f"[{index + 1}/{len(cases)}] {case.message}", flush=True)
         result = run_case(agent, case)
-        results.append(result)
+        saved[case.number] = result
         if result["error"]:
             print(f"   ERRO: {result['error'][:200]}", flush=True)
         else:
@@ -243,7 +284,9 @@ def main() -> None:
                 f"preço={'ok' if result['price_ok'] else 'FALHOU'} busca={'ok' if result['search_ok'] else 'FALHOU'}",
                 flush=True,
             )
-        write_report(results)  # grava a cada caso, para não perder o progresso
+        # Casos com erro também ficam salvos (aparecem no relatório) e são refeitos na próxima execução.
+        STATE_PATH.write_text(json.dumps(saved, ensure_ascii=False, indent=1), encoding="utf-8")
+        write_report(saved)  # grava a cada caso, para não perder o progresso
         if index < len(cases) - 1:
             time.sleep(args.delay)
     print(f"\nRelatório salvo em {REPORT_PATH}")
