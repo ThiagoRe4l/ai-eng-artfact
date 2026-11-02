@@ -36,3 +36,9 @@ class SearchPoliciesInput(BaseModel):
     question: str = Field(
         description="Dúvida do cliente reescrita de forma objetiva, ex.: 'prazo para troca por defeito', 'parcelamento em 10x parcela mínima'."
     )
+
+class GetOrderStatusInput(BaseModel):
+    order_id: int = Field(description="Número do pedido informado pelo cliente.")
+    email_or_phone: str = Field(
+        description="E-mail ou telefone informado pelo cliente nesta conversa, para confirmar a identidade."
+    )
