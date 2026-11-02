@@ -1,4 +1,5 @@
 .env
 .venv/
 __pycache__/
-*.pycevals/search_results.json
+*.pyc
+evals/search_results.json
