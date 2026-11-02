@@ -1,6 +1,10 @@
 import sys
 from src.assistant import create_assistant
 from src.config import validate_environment
+from rich.console import Console
+from rich.markdown import Markdown
+
+console = Console()
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -28,7 +32,8 @@ def main() -> None:
                     {"messages": [{"role": "user", "content": question}]},
                     config,
                 )
-                print(response["messages"][-1].text, "\n")
+                console.print(Markdown(response["messages"][-1].text))
+                print()
             except Exception as e:
                 print(f"Erro ao processar a pergunta: {e}\n")
     except (KeyboardInterrupt, EOFError):
