@@ -26,10 +26,17 @@ class SearchProductsInput(BaseModel):
             "Basta o produto ter uma das palavras; quem tem mais aparece primeiro."
         ),
     )
+    
     category: CategoryName | None = Field(default=None, description="Categoria exata do catálogo.")
     min_price: float | None = Field(default=None, ge=0, description="Preço final mínimo em reais.")
     max_price: float | None = Field(
         default=None, ge=0, description="Preço final máximo em reais, já considerando promoção ativa."
+    )
+
+    on_promotion: bool = Field(default=False, description="True para trazer só produtos com promoção ativa.")
+    sort: Literal["relevance", "price_asc", "price_desc"] = Field(
+        default="relevance",
+        description="Ordenação. Use 'price_desc' para os mais caros ou topo de linha e 'price_asc' para os mais baratos.",
     )
 
 class SearchPoliciesInput(BaseModel):

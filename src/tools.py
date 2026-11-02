@@ -62,11 +62,13 @@ def search_products(
     category: str | None = None,
     min_price: float | None = None,
     max_price: float | None = None,
+    on_promotion: bool = False,
+    sort: str = "relevance",
 ) -> str:
     """Busca instrumentos no catálogo com preço, promoção ativa e disponibilidade atualizados.
 
     Use sempre que o cliente perguntar por produtos, preços, estoque ou promoções, ou pedir
-    recomendação. Se não encontrar nada, tente de novo com menos filtros ou outras palavras.
+    recomendação. Se não encontrar nada, tente no máximo mais uma vez com menos filtros.
     """
     sql = """
         SELECT p.product_id, p.name, c.name AS category, p.price_brl, p.stock_quantity,
@@ -76,14 +78,25 @@ def search_products(
         JOIN categories c ON c.category_id = p.category_id
         LEFT JOIN promotions pr ON pr.product_id = p.product_id AND pr.is_active = 1
     """
-    params: tuple = ()
+    conditions, params = [], []
     if category:
-        sql += " WHERE c.name = ?"
-        params = (category,)
+        conditions.append("c.name = ?")
+        params.append(category)
+    if on_promotion:
+        conditions.append("pr.promotion_id IS NOT NULL")
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+
+    rows = query(sql, tuple(params))
+    if category and not on_promotion and not rows:
+        return json.dumps(
+            {"results": [], "message": f"A loja não tem produtos cadastrados na categoria {category} no momento."},
+            ensure_ascii=False,
+        )
 
     words = _normalize(term).split() if term else []
     results = []
-    for row in query(sql, params):
+    for row in rows:
         score = 0
         if words:
             haystack = _normalize(f"{row['name']} {row['description']} {row['specs']}")
@@ -124,7 +137,14 @@ def search_products(
             ensure_ascii=False,
         )
 
-    results.sort(key=lambda r: (-r[0], AVAILABILITY_ORDER[r[1]["availability"]], r[1]["final_price"]))
+    if sort == "price_desc":
+        sort_key = lambda r: (AVAILABILITY_ORDER[r[1]["availability"]], -r[1]["final_price"])
+    elif sort == "price_asc":
+        sort_key = lambda r: (AVAILABILITY_ORDER[r[1]["availability"]], r[1]["final_price"])
+    else:
+        sort_key = lambda r: (-r[0], AVAILABILITY_ORDER[r[1]["availability"]], r[1]["final_price"])
+    results.sort(key=sort_key)
+
     return json.dumps(
         {"total_found": len(results), "results": [p for _, p in results[:MAX_RESULTS]]},
         ensure_ascii=False,
