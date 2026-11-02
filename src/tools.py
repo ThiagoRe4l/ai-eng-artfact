@@ -4,7 +4,8 @@ import unicodedata
 from langchain_core.tools import tool
 
 from src.db import query
-from src.schemas import SearchProductsInput
+from src.schemas import SearchProductsInput, SearchPoliciesInput
+from src.rag import retrieve_policies
 
 MAX_RESULTS = 8
 PIX_DISCOUNT_PERCENT = 5
@@ -100,3 +101,12 @@ def search_products(
         {"total_found": len(results), "results": [p for _, p in results[:MAX_RESULTS]]},
         ensure_ascii=False,
     )
+
+@tool(args_schema=SearchPoliciesInput)
+def search_policies(question: str) -> str:
+    """Consulta o manual de políticas da loja: pagamento e parcelamento, trocas e devoluções, frete e prazos de entrega, garantia, regras de promoções, horário, contato e privacidade.
+
+    Use para dúvidas sobre regras e condições. Não use para preço, estoque ou status de pedido.
+    """
+    docs = retrieve_policies(question)
+    return "\n\n---\n\n".join(doc.page_content for doc in docs)

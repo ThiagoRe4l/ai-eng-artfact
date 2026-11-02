@@ -31,3 +31,8 @@ class SearchProductsInput(BaseModel):
     max_price: float | None = Field(
         default=None, ge=0, description="Preço final máximo em reais, já considerando promoção ativa."
     )
+
+class SearchPoliciesInput(BaseModel):
+    question: str = Field(
+        description="Dúvida do cliente reescrita de forma objetiva, ex.: 'prazo para troca por defeito', 'parcelamento em 10x parcela mínima'."
+    )
