@@ -8,7 +8,7 @@ Gerado em 02/11/2026 15:55. Cada caso roda numa thread nova do agente real.
 - Checagem de preço (todo R$ citado existe no retorno da tool): 18/18
 - Checagem de busca (produtos esperados retornados): 18/18
 - Passaram nas duas checagens: 18/18
-- Chamadas ao modelo (mensagens do assistente): 45
+- Chamadas ao modelo (mensagens do assistente): 41
 
 As checagens são automáticas e limitadas: a de preço só olha valores com `R$` e pode
 acusar falso positivo em valores derivados (ex.: economia em reais). O comportamento
@@ -33,7 +33,7 @@ esperado de cada caso ainda exige leitura da resposta (seção abaixo).
 | 13 | vocês têm saxofone? | {"term": "saxofone"}<br>{"category": "Instrumentos de Sopro (Madeiras)"} | - | ✅ | ✅ | Temos instrumentos de sopro no catálogo, mas no momento não temos saxofones disponíveis em estoque. Se quiser, posso te mandar o contato do… |
 | 14 | quanto fica o Crafter HT-100 no pix? | {"term": "Crafter HT-100"} | 90, 97, 102 | ✅ | ✅ | O **Crafter HT-100 Folk Aço Natural** está em promoção! - **Preço original:** R$ 2.399,00 - **Desconto:** 18% OFF - **Preço final:** R$ 1.9… |
 | 15 | violão 7 cordas pra choro | {"category": "Violões", "term": "7 cordas"} | 82, 83, 86, 109, 110, 111, 112, 113 | ✅ | ✅ | Para tocar choro, os violões de 7 cordas com **nylon** são os mais indicados por causa do timbre tradicional e do conforto nas baixarias. T… |
-| 16 | qual o melhor violão que vocês têm? dinheiro não é problema | {"category": "Violões"}<br>{"category": "Violões", "min_price": 1000}<br>{"category": "Violões", "min_price": 1700}<br>{"min_price": 4200, "category": "Violões"}<br>{"category": "Violões", "min_price": 12001} | 81, 83, 84, 85, 86, 87, 88, 89, 90, 92, 93, 94, 95, 97, 98,… | ✅ | ✅ | O topo de linha da nossa loja para cordas de aço é o **Martin D-28E Elétrico Aço Natural**, por R$ 12.000,00 (ou R$ 11.400,00 no PIX). É um… |
+| 16 | qual o melhor violão que vocês têm? dinheiro não é problema | {"sort": "price_desc", "category": "Violões"} | 93, 94, 97, 98, 102, 105, 106, 108 | ✅ | ✅ | O topo de linha do nosso catálogo hoje é a linha **Martin D-28**, que é uma verdadeira referência mundial em timbre e construção. As nossas… |
 | 17 | quanto custa uma bateria? | {"category": "Baterias e Percussão"} | 139, 140, 141 | ✅ | ✅ | Temos opções de baterias acústicas no nosso catálogo a partir de **R$ 4.439,00**. Dá uma olhada nas opções disponíveis no momento: * **Bate… |
 | 18 | teclado de 88 teclas | {"term": "88 teclas 88", "category": "Teclados e Pianos"}<br>{"category": "Teclados e Pianos"} | 142, 143, 144 | ✅ | ✅ | No momento, não temos modelos com 88 teclas disponíveis em nosso estoque. Atualmente, nossos teclados disponíveis são de 61 teclas: - **Tec… |
 
@@ -321,24 +321,24 @@ esperado de cada caso ainda exige leitura da resposta (seção abaixo).
 ### 16. qual o melhor violão que vocês têm? dinheiro não é problema
 
 - **Esperado:** Topo de linha (Martin e Taylor)
-- **Chamadas ao modelo:** 6
-- **search_products #1:** `{"category": "Violões"}`
-- **search_products #2:** `{"category": "Violões", "min_price": 1000}`
-- **search_products #3:** `{"category": "Violões", "min_price": 1700}`
-- **search_products #4:** `{"min_price": 4200, "category": "Violões"}`
-- **search_products #5:** `{"category": "Violões", "min_price": 12001}`
-- **IDs retornados:** [81, 83, 84, 85, 86, 87, 88, 89, 90, 92, 93, 94, 95, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 108, 109, 110, 111, 114, 115]
+- **Chamadas ao modelo:** 2
+- **search_products #1:** `{"sort": "price_desc", "category": "Violões"}`
+- **IDs retornados:** [93, 94, 97, 98, 102, 105, 106, 108]
 - **Resposta:**
 
-  > O topo de linha da nossa loja para cordas de aço é o **Martin D-28E Elétrico Aço Natural**, por R$ 12.000,00 (ou R$ 11.400,00 no PIX). É um violão lendário com captação LR Baggs Anthem, tampo sólido em Sitka Spruce e fundo/laterais em Rosewood indiano. 
+  > O topo de linha do nosso catálogo hoje é a linha **Martin D-28**, que é uma verdadeira referência mundial em timbre e construção.
   >
-  > Também temos outras opções de altíssimo nível:
+  > As nossas duas melhores opções disponíveis são:
   >
-  > * **Martin D-28 Dreadnought Natural** (versão puramente acústica): R$ 11.499,00 (R$ 10.924,05 no PIX)
-  > * **Taylor 214ce Elétrico Aço Natural**: R$ 7.499,00 (R$ 7.124,05 no PIX)
-  > * **Crafter CE-15 Elétrico Nylon Natural** (para quem prefere cordas de nylon): R$ 3.899,00 (R$ 3.704,05 no PIX)
+  > 1. **Martin D-28E Elétrico Aço Natural** — **R$ 12.000,00** (ou R$ 11.400,00 no PIX com 5% de desconto)
+  >    - É a versão com captação **LR Baggs Anthem**, o ápice do som amplificado profissional, mantendo o tampo sólido em Sitka Spruce e fundo em East Indian Rosewood.
   >
-  > Você prefere violão com cordas de aço ou nylon? Se quiser detalhes sobre algum deles, só me avisar!
+  > 2. **Martin D-28 Dreadnought Natural (Puro Acústico)** — **R$ 11.499,00** (ou R$ 10.924,05 no PIX com 5% de desconto)
+  >    - O lendário D-28 acústico, famoso pela projeção impecável e pelo timbre encorpado que marcou a história da música mundial.
+  >
+  > Se você busca um instrumento definitivo, qualquer um dos dois vai te entregar o mais alto padrão. 
+  >
+  > Quer que eu ajude você com mais detalhes ou com o processo de compra de algum deles?
 
 ### 17. quanto custa uma bateria?
 
