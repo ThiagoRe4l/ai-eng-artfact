@@ -32,8 +32,8 @@ Agente conversacional por texto, em **Python**, para a Empório da Música, loja
 
 ## Ambiente
 
-- Windows, Python 3.12, ambiente virtual em `.venv` (`.venv\Scripts\python`). Dependências em `requirements.txt`.
-- Rodar a CLI: `.venv\Scripts\python main.py`. Rodar os testes: `.venv\Scripts\python -m pytest`.
+- Windows, Python 3.12, ambiente virtual em `.venv` (`.venv/Scripts/python`). Dependências em `requirements.txt`.
+- Rodar a CLI: `.venv/Scripts/python main.py`. Rodar os testes: `.venv/Scripts/python -m pytest`.
 - Variáveis em `.env` (modelo em `.env.example`): `GOOGLE_API_KEY`, `MODEL_ID` (modelo leve) e `AGENT_MODEL_ID` (modelo do agente).
 - `core.autocrlf=true`: o repositório guarda LF, e o editor do Thiago usa CRLF.
 
