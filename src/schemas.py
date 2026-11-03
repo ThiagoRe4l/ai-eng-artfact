@@ -49,3 +49,7 @@ class GetOrderStatusInput(BaseModel):
     email_or_phone: str = Field(
         description="E-mail ou telefone informado pelo cliente nesta conversa, para confirmar a identidade."
     )
+
+class InputClassification(BaseModel):
+    category: Literal["in_scope", "out_of_scope", "injection_or_abuse"]
+    reason: str = Field(description="Justificativa curta, em uma frase.")

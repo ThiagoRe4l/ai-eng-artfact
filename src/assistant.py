@@ -5,6 +5,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from src.config import AGENT_MODEL_ID
 from src.prompts import build_system_prompt
 from src.tools import get_order_status, search_policies, search_products
+from src.guardrails import input_guardrail
 
 @dynamic_prompt
 def current_system_prompt(request: ModelRequest) -> str:
@@ -15,6 +16,6 @@ def create_assistant():
     return create_agent(
         model=AGENT_MODEL_ID,
         tools=[search_products, search_policies,get_order_status],
-        middleware=[current_system_prompt],
+        middleware=[current_system_prompt, input_guardrail],
         checkpointer=InMemorySaver(),
     )

@@ -3,6 +3,7 @@ from src.assistant import create_assistant
 from src.config import validate_environment
 from rich.console import Console
 from rich.markdown import Markdown
+from src.prompts import GREETING
 
 console = Console()
 
@@ -18,7 +19,9 @@ def main() -> None:
 
     agent = create_assistant()
     config = {"configurable": {"thread_id": "cli-1"}, "recursion_limit": 12}
-    print("Vendedor/Assistente da Empório da Música - (digite 'sair' para encerrar)\n")
+    print("Assistente da Empório da Música - (digite 'sair' para encerrar)\n")
+
+    greeted = False
 
     try:
         while True:
@@ -27,6 +30,10 @@ def main() -> None:
                 continue
             if question.lower() == "sair":
                 break
+            if not greeted:
+                console.print(Markdown(GREETING))
+                print()
+                greeted = True
             try:
                 response = agent.invoke(
                     {"messages": [{"role": "user", "content": question}]},
