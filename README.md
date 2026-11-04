@@ -1,25 +1,29 @@
-# Empório da Música: assistente virtual de atendimento
+# Empório da Música: virtual customer service assistant
 
-Agente conversacional em Python para a **Empório da Música**, loja de instrumentos musicais em Campo Grande (MS). Ele atende clientes por texto, consulta catálogo, promoções e pedidos em dados estruturados, responde dúvidas sobre as políticas da loja com RAG e recusa assuntos fora do escopo.
+🇧🇷 [Versão em português](README.pt-BR.md)
 
-Desenvolvido como teste técnico para a vaga de AI Engineer na Artefact.
+A conversational agent in Python for **Empório da Música**, a musical instrument store in Campo Grande (MS, Brazil). It serves customers over text, looks up the catalog, promotions and orders in structured data, answers questions about store policies with RAG, and declines out-of-scope topics.
+
+Built as the technical assessment for the AI Engineer position at Artefact.
+
+The agent speaks **Brazilian Portuguese**, the language of the store's customers, so the example conversations are in Portuguese. All documentation is in English. Example (translated):
 
 ```
-> quanto fica o Yamaha C40 em 10x e qual o prazo de entrega para Dourados?
+> how much is the Yamaha C40 in 10 installments, and how long is delivery to Dourados?
 
-O Yamaha C40 Nylon Natural está de R$ 599,90 (ou R$ 569,90 no PIX com 5% de desconto).
-• Parcelamento: entre 7x e 12x a parcela mínima é de R$ 100,00, então não é possível
-  fazer em 10x. O máximo para esse valor é em até 6x de R$ 99,98 sem juros.
-• Prazo para Dourados: SEDEX 2 a 5 dias úteis · Jadlog 3 a 8 · PAC 5 a 12.
+The Yamaha C40 Nylon Natural costs R$ 599.90 (or R$ 569.90 via PIX, with a 5% discount).
+• Installments: from 7x to 12x the minimum installment is R$ 100.00, so 10x is not
+  possible. The maximum for this price is up to 6x of R$ 99.98, interest-free.
+• Delivery to Dourados: SEDEX 2–5 business days · Jadlog 3–8 · PAC 5–12.
 ```
 
-Nessa resposta, o agente consultou o **catálogo** (preço) e o **manual de políticas** (parcelamento e frete) e cruzou as duas fontes. Conversa completa em [`examples/01_produto_parcelamento_frete.md`](examples/01_produto_parcelamento_frete.md).
+In this answer the agent queried the **catalog** (price) and the **policy manual** (installments and shipping) and combined both sources. Full conversation in [`examples/01_produto_parcelamento_frete.md`](examples/01_produto_parcelamento_frete.md).
 
 ---
 
-## Como rodar
+## How to run
 
-Pré-requisitos: Python 3.10+ (desenvolvido em 3.12) e uma chave gratuita da API do Gemini ([Google AI Studio](https://aistudio.google.com/apikey)).
+Requirements: Python 3.10+ (developed on 3.12) and a free Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)).
 
 ```bash
 git clone https://github.com/ThiagoRe4l/ai-eng-artfact.git
@@ -30,216 +34,216 @@ source .venv/bin/activate          # Windows (Git Bash): source .venv/Scripts/ac
                                    # Windows (PowerShell): .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 
-cp .env.example .env               # preencha GOOGLE_API_KEY
-python main.py                     # digite "sair" ou Ctrl+C para encerrar
+cp .env.example .env               # fill in GOOGLE_API_KEY
+python main.py                     # type "sair" or press Ctrl+C to quit
 ```
 
-| Variável | Padrão | Uso |
+| Variable | Default | Purpose |
 |---|---|---|
-| `GOOGLE_API_KEY` | (obrigatória) | Chave da API do Gemini |
-| `AGENT_MODEL_ID` | `google_genai:gemini-3.6-flash` | Agente principal (decide as tools e responde) |
-| `MODEL_ID` | `google_genai:gemini-3.5-flash-lite` | Guardrail de entrada (classificador) |
-| `EMBEDDING_MODEL_ID` | `gemini-embedding-2-preview` | Embeddings do RAG de políticas |
+| `GOOGLE_API_KEY` | (required) | Gemini API key |
+| `AGENT_MODEL_ID` | `google_genai:gemini-3.6-flash` | Main agent (chooses tools and answers) |
+| `MODEL_ID` | `google_genai:gemini-3.5-flash-lite` | Input guardrail (classifier) |
+| `EMBEDDING_MODEL_ID` | `gemini-embedding-2-preview` | Embeddings for the policy RAG |
 
-Os modelos são carregados com `init_chat_model`, então trocar de provedor é só mudar a variável (por exemplo, `openai:gpt-...`) e instalar o pacote correspondente.
+Models are loaded with `init_chat_model`, so switching providers only requires changing the variable (e.g. `openai:gpt-...`) and installing the matching package.
 
-**Testes e avaliações**
+**Tests and evaluations**
 
 ```bash
-python -m pytest                       # testes unitários, sem chamadas à API
-python evals/run_search_eval.py        # avaliação da busca com o modelo real (~40 chamadas)
-python evals/run_guardrail_eval.py     # avaliação do classificador de entrada
+python -m pytest                       # unit tests, no API calls
+python evals/run_search_eval.py        # product search evaluation with the real model (~40 calls)
+python evals/run_guardrail_eval.py     # input classifier evaluation
 ```
 
 ---
 
-## Arquitetura
+## Architecture
 
 ```mermaid
 flowchart TD
-    C[Cliente - CLI] --> S[Saudação fixa<br/>na 1ª mensagem]
-    S --> G{Guardrail de entrada<br/>gemini-3.5-flash-lite<br/>saída estruturada}
-    G -- fora do escopo / injeção --> B[Resposta padrão<br/>sem chamar o agente]
-    G -- em escopo --> A[Agente ReAct<br/>gemini-3.6-flash]
+    C[Customer - CLI] --> S[Fixed greeting<br/>on the 1st message]
+    S --> G{Input guardrail<br/>gemini-3.5-flash-lite<br/>structured output}
+    G -- out of scope / injection --> B[Canned reply<br/>agent not called]
+    G -- in scope --> A[ReAct agent<br/>gemini-3.6-flash]
     A <--> P[search_products]
-    A <--> O[get_order_status<br/>com verificação de identidade]
+    A <--> O[get_order_status<br/>with identity verification]
     A <--> R[search_policies]
-    P --> DB[(CSVs → SQLite em memória)]
+    P --> DB[(CSVs → in-memory SQLite)]
     O --> DB
     R --> VS[(policies.md → embeddings<br/>InMemoryVectorStore)]
 ```
 
 ```
-main.py              CLI (rich), saudação fixa, histórico por sessão
+main.py              CLI (rich), fixed greeting, per-session history
 src/
-  assistant.py       create_agent + middlewares (guardrail e prompt dinâmico)
-  prompts.py         system prompt, prompt do classificador, saudação
+  assistant.py       create_agent + middlewares (guardrail and dynamic prompt)
+  prompts.py         system prompt, classifier prompt, greeting
   tools.py           search_products, search_policies, get_order_status
-  schemas.py         schemas Pydantic dos argumentos das tools e do classificador
-  db.py              carga dos CSVs em SQLite em memória
-  rag.py             chunking por seção do manual + vector store
-  guardrails.py      classificador de entrada (middleware before_agent)
-data/                CSVs originais, manual em PDF e versão revisada em Markdown
-tests/               testes unitários (offline)
-evals/               scripts e relatórios de avaliação com o modelo real
-examples/            conversas de exemplo
+  schemas.py         Pydantic schemas for tool arguments and the classifier
+  db.py              loads the CSVs into in-memory SQLite
+  rag.py             section-based chunking of the manual + vector store
+  guardrails.py      input classifier (before_agent middleware)
+data/                original CSVs, PDF manual and its reviewed Markdown version
+tests/               unit tests (offline)
+evals/               evaluation scripts and reports with the real model
+examples/            example conversations
 ```
 
 ---
 
-## Decisões técnicas
+## Technical decisions
 
-### Agente com tools, não fine-tuning
-Estoque, promoções e status de pedido mudam o tempo todo, e o próprio manual da loja proíbe informar preço, estoque ou prazo "sem consultar o sistema". Um modelo treinado com os dados congelaria essas informações e responderia de memória. O desafio pede exatamente o contrário: saber **quando consultar**. Por isso, o agente usa function calling com tools que leem os dados no momento da pergunta.
+### An agent with tools, not fine-tuning
+Stock, promotions and order status change all the time, and the store's own manual forbids giving price, stock or delivery information "without checking the system". A model fine-tuned on the data would freeze that information and answer from memory. The challenge asks for the opposite: knowing **when to look things up**. So the agent uses function calling, with tools that read the data at question time.
 
-### Um agente só, mais um guardrail separado
-Avaliei frameworks multiagente (CrewAI), mas um atendente de loja é uma tarefa só. Dividir em "agente de produtos" e "agente de políticas" adicionaria latência e pontos de falha sem ganho. O guardrail é separado porque tem **outra responsabilidade** (validar a entrada, não atender). Usei o `create_agent` do LangChain 1.x sobre o LangGraph, com middlewares para o guardrail e para o prompt dinâmico.
+### A single agent, plus a separate guardrail
+I considered multi-agent frameworks (CrewAI), but a store attendant is a single task. Splitting it into a "products agent" and a "policies agent" would add latency and failure points with no gain. The guardrail is separate because it has a **different responsibility** (validating input, not serving the customer). I used LangChain 1.x `create_agent` on top of LangGraph, with middlewares for the guardrail and the dynamic prompt.
 
-### Dados estruturados em SQL, texto em RAG
-- **CSVs → SQLite em memória**, com consultas fixas e parametrizadas. Não usei text-to-SQL livre: um agente gerando SQL poderia consultar dados de qualquer cliente, o que o manual (seção de LGPD) não permite. Com tools fechadas, o vazamento fica impossível por construção.
-- **Cálculos em código, não no modelo.** Preço com promoção, preço no PIX (5%, que não acumula com promoção) e disponibilidade já chegam prontos para o agente.
-- **Manual de políticas → RAG.** Colocar um vector store sobre o CSV de produtos faria o modelo errar preço e estoque; colocar o manual em SQL não faz sentido. Cada tipo de dado tem o mecanismo de busca adequado.
+### Structured data in SQL, text in RAG
+- **CSVs → in-memory SQLite**, with fixed, parameterized queries. I did not use free-form text-to-SQL: an agent writing SQL could read any customer's data, which the manual (LGPD, Brazil's data protection law) does not allow. With closed tools, leaks are impossible by construction.
+- **Calculations in code, not in the model.** Promotional price, PIX price (5% off, not combinable with promotions) and availability reach the agent precomputed.
+- **Policy manual → RAG.** A vector store over the products CSV would make the model get prices and stock wrong; putting the manual in SQL makes no sense. Each kind of data gets the right retrieval mechanism.
 
-### RAG das políticas
-- **O PDF foi convertido uma vez para Markdown** (`data/policies.md`) e revisado à mão. Isso evita depender de parser de PDF em tempo de execução, mantém as tabelas legíveis e deixa visíveis os ajustes de normalização (ver "Tratamento dos dados").
-- **Chunking por seção e subseção** (`MarkdownHeaderTextSplitter`), com o caminho do título no início de cada chunk ("Trocas e Devoluções > Trocas por Defeito"). Sem o título, o chunk "até 30 dias corridos" perde a referência de que trata de trocas. O resultado são 20 chunks de 180 a 870 caracteres.
-- **As seções 7 e 10 ficaram fora do índice.** São diretrizes internas da equipe; o que importa delas já está no system prompt. A regra que segui: **comportamento vai no prompt, conhecimento vai no RAG.**
-- Alternativas consideradas: manual inteiro no prompt (simples, mas encarece todas as chamadas), tool com um `Literal` de seções (determinística, mas exige manutenção a cada seção nova), chunking por tamanho fixo (corta tabelas e regras no meio) e chunking semântico (exagerado para 8 páginas).
+### Policy RAG
+- **The PDF was converted once to Markdown** (`data/policies.md`) and reviewed by hand. This avoids depending on a PDF parser at runtime, keeps tables readable, and makes the normalization fixes visible (see "Data handling").
+- **Chunking by section and subsection** (`MarkdownHeaderTextSplitter`), with the heading path at the start of each chunk ("Trocas e Devoluções > Trocas por Defeito"). Without the heading, a chunk saying "up to 30 calendar days" loses the information that it is about returns. The result is 20 chunks of 180 to 870 characters.
+- **Sections 7 and 10 were left out of the index.** They are internal staff guidelines, and what matters from them is already in the system prompt. The rule I followed: **behavior goes in the prompt, knowledge goes in RAG.**
+- Alternatives considered: the whole manual in the prompt (simple, but makes every call more expensive), a tool with a `Literal` of sections (deterministic, but needs maintenance for every new section), fixed-size chunking (splits tables and rules in half) and semantic chunking (overkill for 8 pages).
 
-### Desenho das tools
-- `search_products`: a categoria é um `Literal` (o modelo só escolhe valores válidos). A busca por termo é literal e sem acento, com pontuação por palavras encontradas; a descrição do parâmetro orienta o modelo a **enviar sinônimos** ("iniciante estudante começando"). Também tem filtro de promoção, ordenação por preço e no máximo 8 resultados. O estoque só aparece quando o produto está disponível, e categoria sem produtos devolve uma mensagem explícita.
-- `get_order_status`: exige **número do pedido + e-mail ou telefone**. Só e-mail não basta: dois clientes da base têm o mesmo e-mail. "Pedido não existe" e "dados não batem" têm a mesma resposta, para ninguém descobrir números de pedido por tentativa. A tool devolve só o primeiro nome do cliente.
-- `search_policies`: devolve os 3 chunks mais próximos.
+### Tool design
+- `search_products`: the category is a `Literal` (the model can only pick valid values). Term search is literal and accent-insensitive, scored by matched words; the parameter description tells the model to **send synonyms** ("iniciante estudante começando", i.e. beginner/student/starting). It also has a promotion filter, price sorting and a cap of 8 results. Stock is only shown when the product is available, and an empty category returns an explicit message.
+- `get_order_status`: requires **order number + email or phone**. Email alone is not enough: two customers in the dataset share the same email. "Order does not exist" and "details don't match" return the same message, so nobody can discover order numbers by trial and error. The tool returns only the customer's first name.
+- `search_policies`: returns the 3 closest chunks.
 
 ### Prompt
-- Persona e tom seguem o manual: informal, mas profissional, como em uma conversa de WhatsApp.
-- **Data e hora atuais** entram via middleware `@dynamic_prompt`, recalculado a cada chamada. Sem isso, o agente não sabe se a loja está aberta nem calcula prazos.
-- A seção com a data fica **no fim do prompt**: o prefixo estático (persona, regras e definição das tools) continua idêntico entre chamadas e aproveita o cache implícito do Gemini.
-- A **saudação de apresentação é fixa e enviada pelo código**, não pelo modelo, como a mensagem automática de um canal de WhatsApp. Pedir ao modelo para "sempre se apresentar" gerava variações e saudações duplicadas.
+- Persona and tone follow the manual: informal but professional, like a WhatsApp conversation.
+- **Current date and time** are injected by a `@dynamic_prompt` middleware, recomputed on every call. Without it, the agent cannot tell whether the store is open or compute deadlines.
+- The date section sits **at the end of the prompt**: the static prefix (persona, rules and tool definitions) stays identical across calls and benefits from Gemini's implicit caching.
+- The **introduction greeting is fixed and sent by the code**, not the model, like the automatic message of a WhatsApp channel. Asking the model to "always introduce yourself" produced variations and duplicate greetings.
 
-### Guardrail de entrada
-- Classificador com **saída estruturada (Pydantic)** no modelo leve, em três categorias: `in_scope`, `out_of_scope` e `injection_or_abuse`.
-- Recebe as últimas 4 falas como contexto: respostas curtas como "e em 10x?" ou um número de telefone só fazem sentido com a pergunta anterior.
-- Na dúvida, classifica como `in_scope`. Bloquear um cliente legítimo é pior do que deixar o agente recusar com educação.
-- **Fail-open:** se o classificador falhar (cota, rede), a mensagem segue para o agente, que tem as próprias regras de escopo.
-- Quando bloqueia, devolve uma resposta pronta e encerra **sem chamar o agente**, o que economiza a chamada mais cara.
+### Input guardrail
+- A classifier with **structured output (Pydantic)** on the lightweight model, with three categories: `in_scope`, `out_of_scope` and `injection_or_abuse`.
+- It receives the last 4 turns as context: short replies like "e em 10x?" ("and in 10 installments?") or a phone number only make sense with the previous question.
+- When in doubt, it classifies as `in_scope`. Blocking a legitimate customer is worse than letting the agent decline politely.
+- **Fail-open:** if the classifier fails (quota, network), the message goes to the agent, which has its own scope rules.
+- When it blocks, it returns a canned reply and ends **without calling the agent**, saving the most expensive call.
 
-### Guardrail de saída
-Não implementei em tempo de execução. A avaliação da busca verifica automaticamente se todo valor em R$ citado pelo agente existe no retorno das tools, e passou nos 18 casos. Em produção, essa mesma checagem rodaria depois de cada resposta (com uma nova tentativa usando o erro como feedback e, em seguida, um fallback), mas preferi investir o tempo do desafio em avaliação e documentação.
+### Output guardrail
+Not implemented at runtime. The search evaluation automatically checks that every R$ amount quoted by the agent exists in the tool results, and it passed all 18 cases. In production the same check would run after each answer (with one retry using the error as feedback, then a fallback), but I chose to spend the challenge time on evaluation and documentation.
 
-### Modelos
-Usei o **free tier do Gemini** para que o projeto rode sem custo para quem avaliar:
-- **`gemini-3.6-flash`**, com raciocínio, no agente: decidir *se* e *qual* tool chamar é o núcleo do desafio.
-- **`gemini-3.5-flash-lite`** no classificador: tarefa simples, menor latência e cota separada.
-- **Groq** foi descartado: o limite de tokens por minuto do plano gratuito estoura com system prompt, histórico e resultados de tools.
-- **Modelos locais (Ollama)** também: exigiriam download de gigabytes e o tool calling em português é menos confiável.
+### Models
+I used the **Gemini free tier** so the project runs at no cost for the reviewer:
+- **`gemini-3.6-flash`**, with reasoning, for the agent: deciding *whether* and *which* tool to call is the core of the challenge.
+- **`gemini-3.5-flash-lite`** for the classifier: a simple task, lower latency and a separate quota.
+- **Groq** was ruled out: the free plan's tokens-per-minute limit is exceeded by the system prompt, history and tool results.
+- **Local models (Ollama)** too: they would require gigabytes of downloads, and tool calling in Portuguese is less reliable.
 
-Observação: no free tier, o Google pode usar os prompts para melhorar seus produtos. Com dados fictícios isso não é problema, mas, com dados reais de clientes, seria obrigatório usar o plano pago.
+Note: on the free tier, Google may use prompts to improve its products. With fictional data this is not a problem, but with real customer data the paid plan would be mandatory.
 
 ---
 
-## Tratamento dos dados e suposições
+## Data handling and assumptions
 
-Os dados têm inconsistências, algumas provavelmente intencionais. O que encontrei e como tratei:
+The data has inconsistencies, some probably intentional. What I found and how I handled it:
 
-| Onde | Inconsistência | Decisão |
+| Where | Inconsistency | Decision |
 |---|---|---|
-| `products` | Nomes não batem com a descrição (ex.: "Music Man Bass 1X" descrito como Fender Jazz Bass; "Korg Synth 1" descrito como Roland de 88 teclas, com specs de 61) | Dados mantidos como estão. O agente usa nome, descrição e specs; no caso do teclado, confiou no specs |
-| `products` | Produto `active` com estoque 0 (96); `discontinued` (113, 136); `coming_soon` (130) | Disponibilidade calculada em código: "disponível", "sem estoque", "descontinuado" e "em breve" |
-| `products` | Produto 130 está `coming_soon`, mas aparece vendido nos pedidos 3 e 14 | Mantido. Não afeta as respostas |
-| `categories` | Sopros e cordas orquestrais (6, 7, 8) não têm produtos, mas o manual diz que a loja vende | O prompt não afirma categorias; a tool informa explicitamente quando a categoria está vazia |
-| `promotions` | Só 4 promoções ativas; o Takamine GD20, citado no enunciado, tem promoção **inativa** | Só promoções com `is_active = 1` são aplicadas. Promoção encerrada é informada com transparência |
-| `orders` | Total do pedido 3 (2 × R$ 1.749 = R$ 3.498) registrado como R$ 3.450; pedido 20 soma R$ 1.488 e registra R$ 1.400 | A tool não expõe o total, só itens, status e entrega |
-| `orders` | Pedidos `pending` e `confirmed` são de março de 2026 | O prompt orienta: pedido atrasado ou parado → não inventar motivo, encaminhar à equipe |
-| `customers` | Clientes 11 e 43 com o mesmo e-mail | Verificação exige número do pedido + e-mail ou telefone |
-| Manual | Dois WhatsApps: (67) 3341-4444 e (67) 3321-4500 | WhatsApp = 3321-4500 (seção dedicada ao canal); 3341-4444 = telefone |
-| Manual | E-mail com e sem acento | Sem acento (`contato@emporiodamusica.com.br`) |
-| Manual | Parcelamento até 3x "sem valor mínimo (exceto abaixo de R$ 50,00)"; tabela diz "parcela mínima de R$ 100" para o crédito | Até 3x: parcela mínima de R$ 50. As regras detalhadas da seção 3.1 prevalecem sobre a tabela |
+| `products` | Names don't match descriptions (e.g. "Music Man Bass 1X" described as a Fender Jazz Bass; "Korg Synth 1" described as an 88-key Roland, with specs saying 61) | Data kept as is. When description and specs contradict each other, the agent presents the product and defers the disputed detail to the staff (see "Evaluation") |
+| `products` | `active` product with zero stock (96); `discontinued` (113, 136); `coming_soon` (130) | Availability computed in code: available, out of stock, discontinued, coming soon |
+| `products` | Product 130 is `coming_soon` but appears as sold in orders 3 and 14 | Kept. It does not affect answers |
+| `categories` | Woodwinds, brass and orchestral strings (6, 7, 8) have no products, although the manual says the store sells them | The prompt does not assert categories; the tool explicitly reports empty categories |
+| `promotions` | Only 4 active promotions; the Takamine GD20, mentioned in the challenge, has an **inactive** one | Only promotions with `is_active = 1` apply. Expired promotions are disclosed transparently |
+| `orders` | Order 3 total (2 × R$ 1,749 = R$ 3,498) recorded as R$ 3,450; order 20 items add up to R$ 1,488 but R$ 1,400 is recorded | The tool does not expose totals, only items, status and delivery |
+| `orders` | `pending` and `confirmed` orders are from March 2026 | The prompt says: late or stalled order → don't invent a reason, refer to the staff |
+| `customers` | Customers 11 and 43 share the same email | Verification requires order number + email or phone |
+| Manual | Two WhatsApp numbers: (67) 3341-4444 and (67) 3321-4500 | WhatsApp = 3321-4500 (section dedicated to the channel); 3341-4444 = phone |
+| Manual | Email written with and without an accent | Without the accent (`contato@emporiodamusica.com.br`) |
+| Manual | Up to 3 installments "no minimum (except below R$ 50.00)"; the table says "minimum installment R$ 100" for credit | Up to 3x: minimum installment of R$ 50. The detailed rules in section 3.1 prevail over the table |
 
-Os ajustes no manual foram feitos em `data/policies.md`; o PDF original continua em `data/`.
-
----
-
-## Avaliação
-
-Como o agente não é treinado, a qualidade é garantida por **avaliação**, em duas camadas.
-
-**Testes unitários** (`tests/`, 34 testes, sem rede): construção do prompt, loop da CLI (entrada vazia, `sair`, Ctrl+C), regras da busca de produtos (promoção, PIX, disponibilidade, acentos, limite de resultados) e guardrail com classificador simulado (bloqueio, passagem, fail-open e contexto). A instalação foi validada num ambiente virtual limpo, só com o `requirements.txt`.
-
-**Avaliação da busca com o modelo real** (`evals/run_search_eval.py`): 18 perguntas escritas como clientes reais escrevem ("violao barato", "quanto ta o yamaha f310", "qual o melhor violão? dinheiro não é problema"). Para cada caso, o script registra os argumentos que o modelo passou à tool, os produtos retornados e a resposta, e checa automaticamente:
-1. todo valor em R$ citado na resposta existe no retorno da tool;
-2. os produtos esperados foram retornados.
-
-A primeira rodada encontrou falhas reais, que guiaram as correções:
-- "quais produtos estão em promoção?" estourou o limite de recursão, porque não existia filtro de promoção e o agente buscava em loop → adicionei `on_promotion`.
-- "o melhor violão" exigiu 5 buscas → adicionei `sort`.
-- "vocês têm saxofone?" fez 4 buscas e afirmou que a loja tinha sopros → mensagem explícita para categoria vazia e ajuste no prompt.
-- "violão para iniciante" perdia produtos descritos como "para quem está começando" → orientação para o modelo enviar sinônimos.
-
-Resultado com o código final: **18/18** nas duas checagens. Relatório completo em [`evals/report_search.md`](evals/report_search.md).
-
-A reexecução também mostrou um limite do método. A pergunta "teclado de 88 teclas" teve respostas opostas entre rodadas, porque o próprio dado se contradiz: a descrição do Korg Synth 1 diz 88 teclas, e o specs diz 61. O modelo escolhia um lado diferente a cada vez. Resolvi em três iterações do prompt, cada uma validada com 3 execuções:
-
-1. Regra pedindo para apontar a divergência: estável, mas expunha ao cliente detalhes internos do cadastro.
-2. Regra proibindo expor o cadastro, descrevendo o comportamento esperado: apenas 1 de 3 execuções seguiu a regra, porque o modelo repetia o conflito descrito.
-3. **Frase-modelo** ("esse detalhe eu prefiro confirmar com a equipe...") mais proibição explícita de termos: **3 de 3**. O agente apresenta o produto com preço e PIX e retém só o detalhe em conflito.
-
-Lição: com LLMs, mostrar a frase esperada funciona melhor do que descrever o comportamento. Ainda assim, 3 execuções não são garantia. A solução determinística está em "O que eu faria com mais tempo".
-
-**Avaliação do guardrail** (`evals/run_guardrail_eval.py`): 26 mensagens só no classificador (13 em escopo, 6 fora do escopo e 7 de injeção ou abuso), com foco nas fronteiras: "qual violão pra gospel?", "vocês vendem palheta?", "e em 10x?" e um número de telefone enviados como continuação da conversa, e uma reclamação irritada. Resultado: **26/26, sem nenhum falso bloqueio**. Relatório em [`evals/report_guardrail.md`](evals/report_guardrail.md).
-
-Ressalva honesta: parte desses casos se parece com os exemplos do próprio prompt do classificador, então 100% prova pouco sobre mensagens realmente novas. Com mais tempo, eu montaria um conjunto maior, escrito por outra pessoa e sem sobreposição com o prompt.
+Fixes to the manual were made in `data/policies.md`; the original PDF remains in `data/`.
 
 ---
 
-## Conversas de exemplo
+## Evaluation
 
-| Arquivo | O que mostra |
+Since the agent is not trained, quality is ensured by **evaluation**, in two layers.
+
+**Unit tests** (`tests/`, 34 tests, offline): prompt building, the CLI loop (empty input, `sair`, Ctrl+C), product search rules (promotions, PIX, availability, accents, result cap) and the guardrail with a mocked classifier (block, pass, fail-open and context). Installation was validated in a clean virtual environment using only `requirements.txt`.
+
+**Product search evaluation with the real model** (`evals/run_search_eval.py`): 18 questions written the way real customers write ("violao barato" for "cheap guitar", without accents; "quanto ta o yamaha f310" in casual spelling; "qual o melhor violão? dinheiro não é problema", "what's your best guitar? money is no object"). For each case, the script records the arguments the model passed to the tool, the products returned and the answer, and automatically checks:
+1. every R$ amount quoted in the answer exists in the tool output;
+2. the expected products were returned.
+
+The first run found real failures, which drove the fixes:
+- "which products are on sale?" hit the recursion limit, because there was no promotion filter and the agent searched in a loop → added `on_promotion`.
+- "the best guitar" needed 5 searches → added `sort`.
+- "do you have a saxophone?" ran 4 searches and claimed the store had woodwinds → explicit message for empty categories and a prompt fix.
+- "guitar for beginners" missed products described as "for those who are starting out" → the model is now told to send synonyms.
+
+Result with the final code: **18/18** on both checks. Full report in [`evals/report_search.md`](evals/report_search.md).
+
+The rerun also exposed a limit of the method. The question "88-key keyboard" got opposite answers across runs, because the data contradicts itself: the Korg Synth 1 description says 88 keys and its specs say 61. The model picked a different side each time. I solved it in three prompt iterations, each validated with 3 runs:
+
+1. A rule asking the agent to point out the discrepancy: stable, but exposed internal catalog details to the customer.
+2. A rule forbidding exposure of the catalog, describing the expected behavior: only 1 of 3 runs complied, because the model repeated the described conflict.
+3. A **template phrase** ("this detail I'd rather confirm with the team...") plus an explicit ban on certain words: **3 of 3**. The agent presents the product with price and PIX price and withholds only the disputed detail.
+
+Lesson: with LLMs, showing the expected phrase works better than describing the behavior. Still, 3 runs are not a guarantee. The deterministic solution is listed under "What I would do with more time".
+
+**Guardrail evaluation** (`evals/run_guardrail_eval.py`): 26 messages on the classifier alone (13 in scope, 6 out of scope and 7 injection or abuse), focused on the boundaries: "which guitar is good for gospel?", "do you sell picks?", "and in 10x?" and a phone number sent as a follow-up, and an angry complaint. Result: **26/26, with no false blocks**. Report in [`evals/report_guardrail.md`](evals/report_guardrail.md).
+
+Honest caveat: some of these cases resemble the examples in the classifier prompt itself, so 100% says little about truly new messages. With more time, I would build a larger set, written by someone else, with no overlap with the prompt.
+
+---
+
+## Example conversations
+
+All are real agent runs, with the model's answers unedited. The conversations are in Portuguese; each file opens with an English summary of what it demonstrates.
+
+| File | What it shows |
 |---|---|
-| [`01_produto_parcelamento_frete.md`](examples/01_produto_parcelamento_frete.md) | Catálogo + políticas na mesma resposta; regra de parcela mínima |
-| [`02_pedido_verificacao_atraso.md`](examples/02_pedido_verificacao_atraso.md) | Verificação de identidade e pedido com entrega atrasada |
-| [`03_promocoes_pix.md`](examples/03_promocoes_pix.md) | Promoção encerrada e promoção que não acumula com o PIX |
-| [`04_guardrails_privacidade.md`](examples/04_guardrails_privacidade.md) | Fora do escopo, prompt injection e tentativa de ver pedido de outra pessoa |
-| [`05_recomendacao_estoque_troca.md`](examples/05_recomendacao_estoque_troca.md) | Recomendação para iniciante, produto sem estoque e política de troca |
-
-Todas são execuções reais do agente, sem edição das respostas.
+| [`01_produto_parcelamento_frete.md`](examples/01_produto_parcelamento_frete.md) | Catalog + policies in the same answer; minimum installment rule |
+| [`02_pedido_verificacao_atraso.md`](examples/02_pedido_verificacao_atraso.md) | Identity verification and an order with an overdue delivery |
+| [`03_promocoes_pix.md`](examples/03_promocoes_pix.md) | Expired promotion, and a promotion that does not stack with the PIX discount |
+| [`04_guardrails_privacidade.md`](examples/04_guardrails_privacidade.md) | Out-of-scope request, prompt injection and an attempt to see someone else's order |
+| [`05_recomendacao_estoque_troca.md`](examples/05_recomendacao_estoque_troca.md) | Beginner recommendation, out-of-stock product and return policy |
 
 ---
 
-## Limitações
+## Limitations
 
-- **Histórico só em memória:** a conversa é perdida ao fechar a CLI.
-- **Feriados:** o prompt não tem calendário. O modelo reconheceu Finados sozinho, mas isso não é garantido.
-- **Busca de produtos literal:** depende do modelo enviar bons sinônimos; não há busca semântica nas descrições.
-- **Índice de políticas recalculado** a cada execução (uma chamada de embeddings; irrelevante com 20 chunks, mas não escala).
-- **Dados estáticos:** os CSVs são carregados na inicialização. Num sistema real, as tools consultariam uma API ou um banco ao vivo, sem mudar a interface com o agente.
-- **O guardrail de entrada adiciona uma chamada** (do modelo leve) por mensagem.
-- **Reclamações não são registradas:** não há tool para isso, e o agente orienta o contato com a equipe em vez de fingir que registrou.
-- **Free tier:** sujeito a limites de requisição; com muitas mensagens seguidas, a API pode responder com 429.
+- **In-memory history only:** the conversation is lost when the CLI closes.
+- **Holidays:** the prompt has no calendar. The model recognized a national holiday (Finados) on its own, but this is not guaranteed.
+- **Literal product search:** it depends on the model sending good synonyms; there is no semantic search over descriptions.
+- **The policy index is rebuilt** on every run (one embeddings call; irrelevant with 20 chunks, but it does not scale).
+- **Static data:** the CSVs are loaded at startup. In a real system the tools would query a live API or database, without changing the agent interface.
+- **The input guardrail adds one call** (to the lightweight model) per message.
+- **Complaints are not recorded:** there is no tool for it, so the agent directs the customer to the staff instead of pretending to record it.
+- **Free tier:** subject to rate limits; with many messages in a row, the API may respond with 429.
 
-## O que eu faria com mais tempo
+## What I would do with more time
 
-- Guardrail de saída em tempo de execução, reaproveitando a checagem de preços da avaliação.
-- Marcar no pré-processamento os produtos com descrição e specs conflitantes (a tool devolveria algo como `"confirm_with_staff": ["teclas"]`), sem depender do modelo perceber o conflito.
-- Histórico persistente (`langgraph-checkpoint-sqlite`) e resumo automático de conversas longas.
-- Busca híbrida de produtos (embeddings das descrições + filtros SQL).
-- Índice vetorial persistido em disco.
-- API (FastAPI) e integração com um canal real, como o WhatsApp, com transferência para atendente humano.
-- Tool para registrar reclamações e calendário de feriados.
-- Observabilidade com tracing (LangSmith) e as avaliações rodando em CI.
+- A runtime output guardrail, reusing the price check from the evaluation.
+- Flag products with conflicting description and specs during preprocessing (the tool would return something like `"confirm_with_staff": ["keys"]`), without relying on the model to notice the conflict.
+- Persistent history (`langgraph-checkpoint-sqlite`) and automatic summarization of long conversations.
+- Hybrid product search (embeddings over descriptions + SQL filters).
+- A vector index persisted to disk.
+- An API (FastAPI) and integration with a real channel such as WhatsApp, with handoff to a human agent.
+- A tool to record complaints, and a holiday calendar.
+- Observability with tracing (LangSmith) and the evaluations running in CI.
 
 ---
 
-## Como usei assistentes de IA
+## How I used AI assistants
 
-Antes de falar das ferramentas, vale dizer de onde veio a base do projeto. A estrutura do agente segue o que estudei na pós-graduação em IA e Automação: revisitei as aulas e a documentação do curso sobre configuração e criação de agentes com LangChain (`create_agent`, tools, middlewares e checkpointer) para montar cada etapa, e por isso escolhi o LangChain em vez de outros frameworks. Também trouxe a experiência do meu último trabalho com automação e agentes de IA. Ela pesou diretamente em uma escolha: converter o manual da loja de PDF para Markdown revisado, em vez de ler o PDF em tempo de execução, porque a interpretação de PDFs era um dos problemas mais recorrentes nos projetos em que atuei.
+Before talking about tools, it's worth saying where the foundation of this project came from. The agent's structure follows what I studied in my postgraduate program in AI and Automation: I revisited the course lessons and materials on configuring and building agents with LangChain (`create_agent`, tools, middlewares and checkpointer) to put together each step, which is why I chose LangChain over other frameworks. I also brought experience from my last job working with automation and AI agents. It directly shaped one choice: converting the store manual from PDF to reviewed Markdown instead of parsing the PDF at runtime, because PDF interpretation was one of the most recurring problems in the projects I worked on.
 
-Sobre essa base, usei IA em todas as etapas, com papéis bem definidos:
+On top of that foundation, I used AI at every stage, with well-defined roles:
 
-- **Claude (chat):** leitura do enunciado e dos dados, levantamento das inconsistências, discussão de arquitetura (fine-tuning × tools, multiagente × agente único, estratégias de chunking), pesquisa sobre os modelos gratuitos do Gemini e rascunhos de código (camada de dados, tools, RAG, guardrail), do system prompt, da conversão do manual para Markdown e deste README.
-- **Claude Code:** testes unitários, scripts de avaliação, execução das avaliações e geração das conversas de exemplo. Ele trabalhou com regras escritas no [`CLAUDE.md`](CLAUDE.md): não fazer commits, economizar chamadas da API gratuita e não alterar o código principal sem pedir.
-- **Eu:** decisões finais, integração e revisão de todo o código, testes manuais pela CLI e todos os commits. Algumas decisões partiram de mim: usar LangChain com base no que aprendi na pós, criar um guardrail separado do agente, enviar uma saudação fixa pelo código e testar a robustez da busca com frases variadas.
+- **Claude (chat):** reading the challenge and the data, surveying the inconsistencies, discussing architecture (fine-tuning vs. tools, multi-agent vs. single agent, chunking strategies), researching the free Gemini models, and drafting code (data layer, tools, RAG, guardrail), the system prompt, the Markdown conversion of the manual and this README.
+- **Claude Code:** unit tests, evaluation scripts, running the evaluations and generating the example conversations. It worked under rules written in [`CLAUDE.md`](CLAUDE.md): no commits, save calls on the free API tier, and do not change the main code without asking.
+- **Me:** final decisions, integrating and reviewing all the code, manual testing through the CLI, and every commit. Some decisions came from me: using LangChain based on what I learned in my postgraduate program, a guardrail separate from the agent, a fixed greeting sent by the code, and testing search robustness with varied phrasings.
 
-O que funcionou bem foi usar a IA para **gerar e criticar** ao mesmo tempo. A avaliação escrita pelo Claude Code encontrou falhas nas tools que eu e o Claude (chat) não tínhamos previsto, e cada falha virou uma correção com antes e depois documentados. Ele também encontrou um bug real da CLI no Windows: respostas com emoji quebravam no console cp1252.
+What worked well was using AI to **generate and critique** at the same time. The evaluation written by Claude Code found tool failures that neither I nor Claude (chat) had anticipated, and each failure became a fix with documented before-and-after results. It also found a real CLI bug on Windows: replies containing emoji crashed the cp1252 console.
 
-Sobre o histórico: só o commit do system prompt tem `Co-Authored-By`. Nos demais, o código sugerido pela IA foi revisado, ajustado e testado por mim antes do commit. A divisão de papéis está descrita nesta seção.
+About the commit history: only the system prompt commit carries `Co-Authored-By`. In all others, AI-suggested code was reviewed, adjusted and tested by me before committing. The split of roles is described in this section.
