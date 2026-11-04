@@ -1,6 +1,6 @@
 # Relatório de avaliação da busca de produtos
 
-Gerado em 03/11/2026 21:09. Cada caso roda numa thread nova do agente real.
+Gerado em 03/11/2026 21:30. Cada caso roda numa thread nova do agente real.
 
 ## Resumo
 
@@ -35,7 +35,7 @@ esperado de cada caso ainda exige leitura da resposta (seção abaixo).
 | 15 | violão 7 cordas pra choro | {"category": "Violões", "term": "7 cordas sete cordas choro"} | 83, 86, 98, 109, 110, 111, 112, 113 | ✅ | ✅ | Temos ótimas opções de violão de 7 cordas de nylon, que é o padrão tradicional para choro e samba. Dá uma olhada nas opções disponíveis no … |
 | 16 | qual o melhor violão que vocês têm? dinheiro não é problema | {"category": "Violões", "sort": "price_desc"} | 93, 94, 97, 98, 102, 105, 106, 108 | ✅ | ✅ | O modelo topo de linha do nosso catálogo é o **Martin D-28E Elétrico Aço Natural**, por R$ 12.000,00. Ele é uma verdadeira referência mundi… |
 | 17 | quanto custa uma bateria? | {"category": "Baterias e Percussão", "sort": "price_asc"} | 139, 140, 141 | ✅ | ✅ | Temos opções de bateria acústica a partir de R$ 4.439,00. Confira os modelos disponíveis no nosso catálogo: - **Bateria Acústica Yamaha Kit… |
-| 18 | teclado de 88 teclas | {"term": "88 teclas", "category": "Teclados e Pianos"}<br>{"category": "Teclados e Pianos"} | 142, 143, 144 | ✅ | ✅ | Encontrei em nosso catálogo o **Teclado Sintetizador Korg Synth 1 Pro** (R$ 1.127,00 ou R$ 1.070,65 no PIX), porém consta uma divergência n… |
+| 18 | teclado de 88 teclas | {"category": "Teclados e Pianos", "term": "88 teclas"}<br>{"category": "Teclados e Pianos"} | 142, 143, 144 | ✅ | ✅ | Temos a seguinte opção em nosso catálogo: - **Teclado Sintetizador Korg Synth 1 Pro** - **Preço:** R$ 1.127,00 - **Preço no PIX:** R$ 1.070… |
 
 ## Detalhe por caso
 
@@ -321,14 +321,19 @@ esperado de cada caso ainda exige leitura da resposta (seção abaixo).
 
 - **Esperado:** Teclados de 88 teclas
 - **Chamadas ao modelo:** 3
-- **search_products #1:** `{"term": "88 teclas", "category": "Teclados e Pianos"}`
+- **search_products #1:** `{"category": "Teclados e Pianos", "term": "88 teclas"}`
 - **search_products #2:** `{"category": "Teclados e Pianos"}`
 - **IDs retornados:** [142, 143, 144]
 - **Resposta:**
 
-  > Encontrei em nosso catálogo o **Teclado Sintetizador Korg Synth 1 Pro** (R$ 1.127,00 ou R$ 1.070,65 no PIX), porém consta uma divergência nas informações do sistema: a descrição do produto menciona 88 teclas pesadas (e marca Roland), enquanto as especificações técnicas indicam 61 teclas.
+  > Temos a seguinte opção em nosso catálogo:
   >
-  > Por conta dessa inconsistência no cadastro, sugiro confirmar o número exato de teclas e o modelo correto com a nossa equipe pelo WhatsApp no **(67) 3321-4500**.
+  > - **Teclado Sintetizador Korg Synth 1 Pro**
+  >   - **Preço:** R$ 1.127,00
+  >   - **Preço no PIX:** R$ 1.070,65
+  >   - **Disponibilidade:** Em estoque
   >
-  > Posso te ajudar com mais alguma dúvida?
+  > Sobre a quantidade de teclas, esse detalhe eu prefiro confirmar com a equipe antes de te garantir. Você pode falar com eles pelo WhatsApp (67) 3321-4500.
+  >
+  > Posso te ajudar com mais alguma informação?
 
