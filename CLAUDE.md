@@ -34,20 +34,30 @@ Agente conversacional por texto, em **Python**, para a Empório da Música, loja
 
 - Windows, Python 3.12, ambiente virtual em `.venv` (`.venv/Scripts/python`). Dependências em `requirements.txt`.
 - Rodar a CLI: `.venv/Scripts/python main.py`. Rodar os testes: `.venv/Scripts/python -m pytest`.
-- Variáveis em `.env` (modelo em `.env.example`): `GOOGLE_API_KEY`, `MODEL_ID` (modelo leve) e `AGENT_MODEL_ID` (modelo do agente).
+- Avaliações com o modelo real (gastam cota): `.venv/Scripts/python -u evals/run_search_eval.py` e `.venv/Scripts/python -u evals/run_guardrail_eval.py`.
+- Variáveis em `.env` (modelo em `.env.example`): `GOOGLE_API_KEY`, `MODEL_ID` (modelo leve), `AGENT_MODEL_ID` (modelo do agente) e `EMBEDDING_MODEL_ID` (embeddings do RAG).
 - `core.autocrlf=true`: o repositório guarda LF, e o editor do Thiago usa CRLF.
 
 ## Stack e estrutura
 
 - LangChain 1.x (`create_agent`) e LangGraph (checkpointer), com Gemini via `langchain-google-genai` no free tier.
   - Agente: `gemini-3.6-flash`, com raciocínio para decidir as tools.
-  - Modelo leve: `gemini-3.5-flash-lite`, reservado para o guardrail de entrada.
-- `main.py`: loop de CLI. Ignora entrada vazia; `sair`, Ctrl+C e EOF encerram sem traceback.
+  - Modelo leve: `gemini-3.5-flash-lite`, usado só pelo guardrail de entrada.
+  - Embeddings: `gemini-embedding-2-preview` (RAG das políticas).
+- `main.py`: loop de CLI. Ignora entrada vazia; `sair`, Ctrl+C e EOF encerram sem traceback. A **saudação fixa** (`GREETING`, de `src/prompts.py`) é exibida uma vez, na primeira mensagem do cliente, sem chamar o modelo e sem entrar no histórico do agente. As respostas são renderizadas como Markdown com `rich`.
 - `src/config.py`: carrega o `.env` e valida as variáveis.
-- `src/prompts.py`: `SYSTEM_PROMPT_TEMPLATE` e `build_system_prompt(now=None)`. Usa fuso fixo UTC-4 (Campo Grande, sem horário de verão), porque o Windows não traz `tzdata`.
-- `src/assistant.py`: `create_assistant()` com `create_agent`, middleware `@dynamic_prompt` (remonta o prompt a cada chamada para a data e a hora nunca ficarem velhas) e `InMemorySaver`.
+- `src/prompts.py`: `SYSTEM_PROMPT_TEMPLATE`, `build_system_prompt(now=None)`, `CLASSIFIER_PROMPT` e `GREETING`. Usa fuso fixo UTC-4 (Campo Grande, sem horário de verão), porque o Windows não traz `tzdata`.
+- `src/assistant.py`: `create_assistant()` com `create_agent`, as 3 tools, middlewares `@dynamic_prompt` (remonta o prompt a cada chamada para a data e a hora nunca ficarem velhas) e `input_guardrail`, e `InMemorySaver`.
+- `src/guardrails.py`: guardrail de entrada (`@before_agent`). Classifica a última mensagem, com as últimas 4 falas como contexto, em `in_scope`, `out_of_scope` ou `injection_or_abuse`. Os dois últimos devolvem uma resposta pronta (`BLOCKED_REPLIES`) e encerram o fluxo sem chamar o agente. **Fail-open:** se o classificador falhar, a mensagem passa, porque o agente tem as próprias regras de escopo.
 - `src/llm.py`: `get_model()` e `test_model()` com o modelo leve.
-- `src/tools.py`, `src/rag.py`, `src/schemas.py`: vazios, aguardando as próximas etapas.
+- `src/db.py`: SQLite em memória carregado dos CSVs de `data/`.
+- `src/tools.py` (3 tools):
+  - `search_products(term, category, min_price, max_price, on_promotion, sort)`: preço final com promoção ativa, preço no PIX (só sem promoção), disponibilidade (`disponível`, `sem estoque`, `em breve`, `descontinuado`), no máximo 8 resultados;
+  - `search_policies(question)`: RAG do manual;
+  - `get_order_status(order_id, email_or_phone)`: exige número do pedido mais e-mail ou telefone; devolve a mesma resposta para "não existe" e "identidade não confere".
+- `src/rag.py`: `data/policies.md` (versão revisada do PDF) dividido por seção e subseção (`MarkdownHeaderTextSplitter`), com `InMemoryVectorStore`. As seções 7 e 10 (diretrizes internas) ficam fora.
+- `src/schemas.py`: entradas das tools e `InputClassification`.
+- `tests/`: testes unitários sem rede (prompts, CLI, tools, guardrail). `evals/`: avaliações com o modelo real (busca e guardrail), com relatórios em Markdown. `examples/`: conversas de exemplo reais.
 
 ## Decisões de arquitetura
 
@@ -58,20 +68,15 @@ Já tomadas:
 - **System prompt:** persona, regras de comportamento e fatos usados quase sempre (endereço, contatos, horário). Detalhes de pagamento, trocas, frete e garantia ficam no RAG. A seção com a data atual fica **no fim** do prompt para preservar o prefixo estático (cache implícito do Gemini).
 - **Thought signatures do Gemini 3:** o histórico precisa manter as `AIMessage` originais. Não reconstrua mensagens a partir do texto.
 
-Planejadas:
+- **Tools tipadas** em vez de text-to-SQL livre, para evitar vazamento de dados de clientes (LGPD). Prontas: `search_products`, `search_policies` e `get_order_status` (ver acima). `get_product_details` foi descartada, porque `search_products` já devolve descrição e specs.
+- **RAG das políticas** com chunking por seção e `InMemoryVectorStore`. Sem Weaviate, porque exige servidor e atrapalha o avaliador. Exposto como tool (`search_policies`).
+- **Guardrail de entrada** implementado, com 3 categorias (`in_scope`, `out_of_scope`, `injection_or_abuse`). Acessório não é categoria própria: pedir uma palheta é `in_scope`, e o agente explica com gentileza que a loja não vende. Na dúvida entre `in_scope` e `out_of_scope`, vale `in_scope`, porque bloquear um cliente legítimo é pior do que deixar passar. Medido em `evals/run_guardrail_eval.py`.
+- **Guardrail de saída: NÃO implementado em runtime.** A regra "todo preço citado precisa vir do resultado das tools" é validada apenas offline, pela checagem automática de `evals/run_search_eval.py`. Hoje a garantia vem do prompt (regra 1) e do fato de a tool já devolver preço final e preço no PIX calculados em código. Citar isso como limitação no README.
 
-- **Tools tipadas** em vez de text-to-SQL livre, para evitar vazamento de dados de clientes (LGPD):
-  - `search_products(category, max_price, term, ...)`, que já considera status, estoque e promoção ativa;
-  - `get_product_details(name_or_id)`;
-  - `get_order_status(order_id, email_or_phone)`, que exige verificação de identidade.
-- **RAG das políticas** com chunking por seção do PDF e `InMemoryVectorStore`. Não usar Weaviate, porque exige servidor e atrapalha o avaliador. Exposto como tool (`search_policies`).
-- **Guardrail de entrada:** classificador com saída estruturada (Pydantic) no modelo leve. Categorias: `in_scope`, `accessory`, `out_of_scope`, `injection_or_abuse`. Cuidado com falsos positivos, como "qual violão para gospel?".
-- **Guardrail de saída**, determinístico, sem LLM:
-  - preços citados precisam vir do resultado das tools;
-  - desconto só se a promoção tiver `is_active = 1`;
-  - nenhum dado de outro cliente.
-  - Se falhar, uma nova tentativa com o erro como feedback; depois, fallback.
-- Persistência do histórico (SQLite), script de avaliação com mensagens de borda e conversas de exemplo.
+Pendentes:
+
+- Persistência do histórico (SQLite): hoje o histórico fica em memória (`InMemorySaver`) e se perde ao fechar a CLI.
+- Guardrail de saída em runtime (preço fora das tools, desconto sem promoção ativa, dado de outro cliente), com uma nova tentativa usando o erro como feedback e depois um fallback.
 
 ## Dados (`data/`) e inconsistências conhecidas
 
