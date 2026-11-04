@@ -178,7 +178,13 @@ A primeira rodada encontrou falhas reais, que guiaram as correções:
 
 Resultado com o código final: **18/18** nas duas checagens. Relatório completo em [`evals/report_search.md`](evals/report_search.md).
 
-A reexecução também mostrou um limite do método: a pergunta "teclado de 88 teclas" teve respostas diferentes entre rodadas, porque o próprio dado se contradiz (a descrição do Korg Synth 1 diz 88 teclas; o specs, 61). Acrescentei ao prompt uma regra para o agente apontar a divergência em vez de escolher um lado.
+A reexecução também mostrou um limite do método. A pergunta "teclado de 88 teclas" teve respostas opostas entre rodadas, porque o próprio dado se contradiz: a descrição do Korg Synth 1 diz 88 teclas, e o specs diz 61. O modelo escolhia um lado diferente a cada vez. Resolvi em três iterações do prompt, cada uma validada com 3 execuções:
+
+1. Regra pedindo para apontar a divergência: estável, mas expunha ao cliente detalhes internos do cadastro.
+2. Regra proibindo expor o cadastro, descrevendo o comportamento esperado: apenas 1 de 3 execuções seguiu a regra, porque o modelo repetia o conflito descrito.
+3. **Frase-modelo** ("esse detalhe eu prefiro confirmar com a equipe...") mais proibição explícita de termos: **3 de 3**. O agente apresenta o produto com preço e PIX e retém só o detalhe em conflito.
+
+Lição: com LLMs, mostrar a frase esperada funciona melhor do que descrever o comportamento. Ainda assim, 3 execuções não são garantia. A solução determinística está em "O que eu faria com mais tempo".
 
 **Avaliação do guardrail** (`evals/run_guardrail_eval.py`): 26 mensagens só no classificador (13 em escopo, 6 fora do escopo e 7 de injeção ou abuso), com foco nas fronteiras: "qual violão pra gospel?", "vocês vendem palheta?", "e em 10x?" e um número de telefone enviados como continuação da conversa, e uma reclamação irritada. Resultado: **26/26, sem nenhum falso bloqueio**. Relatório em [`evals/report_guardrail.md`](evals/report_guardrail.md).
 
@@ -214,6 +220,7 @@ Todas são execuções reais do agente, sem edição das respostas.
 ## O que eu faria com mais tempo
 
 - Guardrail de saída em tempo de execução, reaproveitando a checagem de preços da avaliação.
+- Marcar no pré-processamento os produtos com descrição e specs conflitantes (a tool devolveria algo como `"confirm_with_staff": ["teclas"]`), sem depender do modelo perceber o conflito.
 - Histórico persistente (`langgraph-checkpoint-sqlite`) e resumo automático de conversas longas.
 - Busca híbrida de produtos (embeddings das descrições + filtros SQL).
 - Índice vetorial persistido em disco.
