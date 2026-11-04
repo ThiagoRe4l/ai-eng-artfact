@@ -1,12 +1,14 @@
-# Exemplo 3: promoção encerrada e preço no PIX
+# Example 3: expired promotion and PIX price
 
-Duas perguntas sobre desconto na mesma conversa, uma com promoção **inativa** e outra com promoção **ativa**, ambas respondidas com dados da tool `search_products`.
+Two discount questions in the same conversation, one about an **inactive** promotion and one about an **active** promotion, both answered with data from the `search_products` tool.
 
-**O que este exemplo mostra**
-- Takamine GD20 (id 95): a promoção existe nos dados, mas está inativa. O agente diz que ela não vale mais, informa o preço atual e o preço no PIX (5%).
-- Crafter HT-100 (id 90): promoção ativa de 18%. A promoção é apresentada com preço original, percentual e preço final (regra 3 do prompt).
-- O desconto de 5% do PIX não é cumulativo com promoção: o agente informa que no PIX o valor continua R$ 1.967,18, em vez de aplicar um segundo desconto.
-- Todos os valores vêm prontos da tool (calculados em código, não pelo modelo).
+**What this example shows**
+- Takamine GD20 (id 95): the promotion exists in the data but is inactive. The agent says it no longer applies and gives the current price and the PIX price (5% off).
+- Crafter HT-100 (id 90): an active 18% promotion, presented with the original price, discount percentage and final price (prompt rule 3).
+- The 5% PIX discount does not stack with promotions: the agent says the PIX price stays at R$ 1,967.18 instead of applying a second discount.
+- All amounts come precomputed from the tool (calculated in code, not by the model).
+
+_The conversation below is in Brazilian Portuguese, the language of the store's customers. Agent answers are unedited._
 
 ---
 

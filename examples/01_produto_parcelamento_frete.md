@@ -1,11 +1,13 @@
-# Exemplo 1: produto + parcelamento + frete
+# Example 1: product + installments + shipping
 
-Pergunta que exige as duas fontes de dados na mesma resposta: o catálogo (`search_products`) e o manual de políticas (`search_policies`).
+A question that needs both data sources in the same answer: the catalog (`search_products`) and the policy manual (`search_policies`).
 
-**O que este exemplo mostra**
-- Preço e preço no PIX vindos da tool de produtos (calculados em código, não pelo modelo).
-- Aplicação da regra de parcela mínima (seção 3.1): 10x de R$ 59,99 fica abaixo do mínimo de R$ 100,00 para 7x a 12x, então o agente recusa e informa o máximo possível (6x de R$ 99,98, mínimo de R$ 80,00 para 4x a 6x).
-- Prazos de entrega para fora da região metropolitana (seção 5.2), sem inventar o valor do frete.
+**What this example shows**
+- Price and PIX price come from the products tool (computed in code, not by the model).
+- The minimum installment rule (section 3.1): 10x of R$ 59.99 is below the R$ 100.00 minimum for 7x to 12x, so the agent declines and offers the maximum possible (6x of R$ 99.98; the minimum for 4x to 6x is R$ 80.00).
+- Delivery times outside the metropolitan area (section 5.2), without inventing the shipping cost.
+
+_The conversation below is in Brazilian Portuguese, the language of the store's customers. Agent answers are unedited._
 
 ---
 

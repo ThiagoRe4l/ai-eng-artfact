@@ -1,12 +1,14 @@
-# Exemplo 2: status de pedido com verificação de identidade e atraso
+# Example 2: order status with identity verification and a late delivery
 
-Consulta de pedido (`get_order_status`), que só funciona com o número do pedido **e** um segundo dado do titular.
+An order lookup (`get_order_status`), which only works with the order number **and** a second piece of the owner's data.
 
-**O que este exemplo mostra**
-- O agente não consulta o pedido só com o número: pede o e-mail ou o telefone cadastrado antes de chamar a tool.
-- Verificação de identidade: o telefone informado como `99654-7821` confere com o cadastro `(67) 99654-7821` (a tool compara os últimos 9 dígitos, ignorando formatação e DDD).
-- Atraso: o pedido está `shipped` com previsão de 28/02/2026. O agente compara a previsão com a data atual, avisa que ela já passou e encaminha ao WhatsApp da loja, sem inventar a situação do transporte.
-- O nome do cliente vem do cadastro (só o primeiro nome), depois de a identidade ser confirmada.
+**What this example shows**
+- The agent does not look up the order with the number alone: it asks for the registered email or phone before calling the tool.
+- Identity verification: the phone typed as `99654-7821` matches the record `(67) 99654-7821` (the tool compares the last 9 digits, ignoring formatting and area code).
+- Delay: the order is `shipped` with an estimated delivery of 02/28/2026. The agent compares the estimate with the current date, says it has passed and refers the customer to the store's WhatsApp, without inventing the shipment status.
+- The customer's name comes from the record (first name only), after the identity is confirmed.
+
+_The conversation below is in Brazilian Portuguese, the language of the store's customers. Agent answers are unedited._
 
 ---
 

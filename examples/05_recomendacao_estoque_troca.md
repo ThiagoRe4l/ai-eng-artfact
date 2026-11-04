@@ -1,11 +1,13 @@
-# Exemplo 5: recomendação, produto sem estoque e política de troca
+# Example 5: recommendation, out-of-stock product and return policy
 
-Conversa de três perguntas que passa pelas duas fontes de dados: o catálogo (`search_products`) e o manual de políticas (`search_policies`).
+A three-question conversation that uses both data sources: the catalog (`search_products`) and the policy manual (`search_policies`).
 
-**O que este exemplo mostra**
-- Recomendação com orçamento: o agente busca violões para iniciante com teto de R$ 700,00 (preço final, já considerando promoção) e mostra o preço e o preço no PIX de cada um.
-- Produto sem estoque: o Giannini GF-3D está `active` com estoque 0. O agente informa que está indisponível, mantém o preço e sugere uma alternativa da mesma marca disponível e dentro do orçamento.
-- Troca por defeito: o agente decide sozinho consultar o manual (seção 4.2) e responde com o prazo de 30 dias corridos, a garantia do fabricante depois disso e o que não é coberto. Também cita os 7 dias de arrependimento (seção 4.1) para compras online.
+**What this example shows**
+- Budget-based recommendation: the agent searches beginner guitars under R$ 700.00 (final price, promotions included) and shows each one's price and PIX price.
+- Out-of-stock product: the Giannini GF-3D is `active` with zero stock. The agent says it is unavailable, keeps the price and suggests an available alternative from the same brand within budget.
+- Return for defects: the agent decides on its own to consult the manual (section 4.2) and answers with the 30-calendar-day window, the manufacturer's warranty after that, and what is not covered. It also mentions the 7-day withdrawal right (section 4.1) for online purchases.
+
+_The conversation below is in Brazilian Portuguese, the language of the store's customers. Agent answers are unedited._
 
 ---
 

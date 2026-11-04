@@ -1,11 +1,13 @@
-# Exemplo 4: guardrails e privacidade
+# Example 4: guardrails and privacy
 
-Três tentativas que o agente não pode atender: assunto fora do escopo, tentativa de extrair o prompt e acesso a um pedido de outra pessoa.
+Three requests the agent must not fulfill: an out-of-scope topic, an attempt to extract the prompt, and access to someone else's order.
 
-**O que este exemplo mostra**
-- As duas primeiras mensagens (receita de bolo e "ignore suas instruções") são barradas pelo **guardrail de entrada**: um classificador no modelo leve as marca como `out_of_scope` e `injection_or_abuse`, e uma resposta pronta é enviada sem chamar o agente principal.
-- Na terceira, o pedido 3 existe, mas o e-mail informado não é do titular. A tool `get_order_status` responde com a mesma mensagem para "pedido inexistente" e "identidade não confere".
-- Nenhum dado vaza: a resposta não revela nome, itens, status nem se o pedido existe (LGPD).
+**What this example shows**
+- The first two messages (a cake recipe and "ignore your instructions") are stopped by the **input guardrail**: a classifier on the lightweight model labels them `out_of_scope` and `injection_or_abuse`, and a canned reply is sent without calling the main agent.
+- In the third, order 3 exists, but the email given does not belong to its owner. The `get_order_status` tool returns the same message for "order does not exist" and "identity does not match".
+- No data leaks: the answer reveals no name, items, status, or even whether the order exists (LGPD).
+
+_The conversation below is in Brazilian Portuguese, the language of the store's customers. Agent answers are unedited._
 
 ---
 
