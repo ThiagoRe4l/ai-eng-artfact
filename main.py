@@ -9,8 +9,6 @@ console = Console()
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-
-def main() -> None:
     try:
         validate_environment()
     except RuntimeError as e:
